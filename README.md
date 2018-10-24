@@ -1,2 +1,2 @@
 # terraform files
-in this repository we can view severals terraform files what permits bring up many infraestructure
+in this repository we can view many tools (terraform files / dockerfiles /shell scripts ) what permits bring up many infraestructure or generate managment and provision machines , container ,etc
