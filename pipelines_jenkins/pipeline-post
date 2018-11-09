@@ -1,0 +1,33 @@
+pipeline {
+    agent none
+    stages {
+        stage('alpine-oimage') {
+            agent {
+                docker { image 'alpine:latest' }
+            }
+            steps {
+                sh 'hostname'
+                sh 'echo hola desde el contenedor'
+            }
+        }
+        stage('Front-end') {
+            agent { label 'master' }
+
+            steps {
+                retry(3){
+                    timeout( time: 3 , unit: 'SECONDS'){
+                        sh 'sleep 5'
+                    }
+                }
+
+            }
+        }
+    }
+    post{
+        always{}
+        success {}
+        failure {}
+        unstable {}
+        changed {}
+    }
+}

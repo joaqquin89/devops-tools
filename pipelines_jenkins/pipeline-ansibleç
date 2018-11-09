@@ -1,0 +1,38 @@
+pipeline {
+  agent any
+  stages {
+        stage('Build a host file') {
+            agent { label 'master' }
+            steps {
+              sh 'echo "[all:vars]\n\nansible_connection = ssh\n\n[servers]\n\nserver"${BUILD_NUMBER}" ansible_host="${IP}" ansible_user="${USER}" ansible_private_key_file=/var/jenkins_home/ansible/remote-key" > /var/jenkins_home/ansible/host${BUILD_NUMBER}'
+              }
+        }
+        stage('Run Ansible Playbook') {
+            steps {
+                dir("${WORKSPACE}") {
+                ansiblePlaybook([
+                    inventory   : '/var/jenkins_home/ansible/host${BUILD_NUMBER}',
+                    playbook    : '/var/jenkins_home/ansible/play-2.yml',
+                    installation: 'ansible',
+                    colorized   : true,
+                    extraVars   : [
+                    IP: "${IP}"
+                    ]
+                ])
+               }
+           }
+       }
+      stage('remove a host file') {
+                agent { label 'master' }
+                steps {
+                  sh 'rm /var/jenkins_home/ansible/host${BUILD_NUMBER}'
+                  }
+        }         
+   }
+  post {
+        success {
+            echo 'If the pipeline finish sucess'
+            emailext body: 'El pipeline ${JOB_NAME} en su intento numero ${BUILD_NUMBER} termino con exito', subject: 'pipeline jenkins , tarea numero ${BUILD_NUMBER}  ', to: 'jjachurac@falabella.cl'
+        }
+    }
+}
