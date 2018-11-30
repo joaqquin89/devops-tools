@@ -1,0 +1,147 @@
+#!/bin/bash
+
+function INICIO
+{
+       BESP_RUTA="/tmp/BESP"
+       HOST=`hostname -s | awk '{print tolower($0)}'`
+       BESP_LOG="${BESP_RUTA}/log"
+       BESP_TMP="${BESP_RUTA}/tmp"
+       BESP_DAT="${BESP_RUTA}/dat"
+       source $BESP_DAT/besp_setenv.dat
+}
+
+function DISCOS
+{
+      fdisk -l |grep /dev/ |grep -v mapper |grep -v Linux |awk -F":" '{ print $1}'|sort -n > $BESP_TMP/disks.out
+      disks=`cat ${BESP_TMP}/disks.out|wc -l`
+      if [ ${disks} == "1" ]
+         then
+           printf " WARNING \n">  $BESP_DAT/${HOST}_lvm_info.dat
+           printf "#Solo existe ${disks} NO es posible realizar configuraciones #\n" >> $BESP_DAT/${HOST}_lvm_info.dat
+           printf "#de estructura de Filesystem y Usuarios                      #\n" >> $BESP_DAT/${HOST}_lvm_info.dat
+           printf "#Favor revisar datos de Aprovisionamiento                    #\n" >> $BESP_DAT/${HOST}_lvm_info.dat
+           printf " WARNING \n">> $BESP_DAT/${HOST}_lvm_info.dat
+           exit 1
+      fi
+      if [ ${disks} == "2" ]
+          then
+             TIPO="APP"
+      fi
+      if  [ ${disks} -gt 2 ]
+          then
+             TIPO="BD"
+     fi
+
+}
+function CREATE {
+
+      if [ "${TIPO}" == "APP" ]
+         then
+             disk1=`cat ${BESP_TMP}/disks.out |head -1 |awk '{print $2}'`
+             disk2=`cat ${BESP_TMP}/disks.out |head -2 |tail -1 |awk '{print $2}'`
+             sized2=`fdisk -l ${disk2} |grep Disk |awk '{print $3}'|cut -d"." -f1`
+             printf "Servidor tipo: ${TIPO} se creara estructura sobre disco: ${disk2}\n"
+             printf "Espacio de disco: ${sized2}\n"
+             VGAPP
+      fi
+      if [ "${TIPO}" == "BD" ]
+         then
+             disk1=`cat ${BESP_TMP}/disks.out |head -1 |awk '{print $2}'`
+             disk2=`cat ${BESP_TMP}/disks.out |head -2 |tail -1 |awk '{print $2}'`
+             sized2=`fdisk -l ${disk2} |grep Disk |awk '{print $3}'|cut -d"." -f1`
+             printf "Servidor tipo: ${TIPO} se creara estructura sobre disco: ${disk2}\n"
+             printf "Espacio de disco: ${sized2}\n"
+             VGBD
+      fi
+
+}
+
+function VGAPP
+{
+           printf "Comenzando con la creacion de LV de Datos"
+           printf "${disk1} Disco Sistema Operativo\n"
+           printf " Se creara VGDAT01 sobre disco ${disk2} de size ${sized2} servidor tipo ${TIPO}\n"
+           printf "Creando PV,VG,LV y Filesystem para disco ${disk2}.....\n"
+           sleep 2
+           mkdir /u01
+           pvcreate ${disk2}
+           vgcreate vgdat01 ${disk2}
+           lvcreate -n lvdat01 -l 100%FREE vgdat01
+           mkfs -t ext4 /dev/vgdat01/lvdat01
+           printf "/dev/vgdat01/lvdat01    /u01       ext4    defaults 1 0 \n" >> /etc/fstab
+           mount /u01
+}
+function VGBD
+{
+           printf "Comenzando con la creacion de LV de Datos\n"
+           printf "${disk1} Disco Sistema Operativo\n"
+           printf " \n"
+           printf " Se creara VGDAT01 sobre disco ${disk2} de size ${sized2} servido
+r tipo ${TIPO}\n"
+           sleep 3
+           printf "Disco a usar: ${disco2} \n"
+           printf "Creando PV,VG,LV y Filesystem para disco ${disco2}.....\n"
+           mkdir -p /u01;mkdir -p /u03;mkdir -p /u80;mkdir -p /u81;mkdir -p /u85
+           printf "Crea PV...\n"
+           pvcreate ${disk2}
+           printf "Crea VG...\n"
+           vgcreate vgdat01 ${disk2}
+           printf "Crea LV...\n"
+           lvcreate -n lvdat01 -L  60G vgdat01 -y
+           lvcreate -n lvdat02 -L  30G vgdat01 -y
+           lvcreate -n lvdat03 -L  15G vgdat01 -y
+           lvcreate -n lvdat04 -L  15G vgdat01 -y
+           lvcreate -n lvdat05 -L  30G vgdat01 -y
+           printf "Formateo LV como ext4....\n"
+           mkfs.ext4 /dev/vgdat01/lvdat01
+           mkfs.ext4 /dev/vgdat01/lvdat02
+           mkfs.ext4 /dev/vgdat01/lvdat03
+           mkfs.ext4 /dev/vgdat01/lvdat04
+           mkfs.ext4 /dev/vgdat01/lvdat05
+           printf " Montar Filesystem \n "
+           printf "/dev/vgdat01/lvdat01    /u01                    ext4    defaults
+       1 0 \n" >> /etc/fstab
+           printf "/dev/vgdat01/lvdat02    /u03                    ext4    defaults
+       1 0 \n" >> /etc/fstab
+           printf "/dev/vgdat01/lvdat03    /u80                    ext4    defaults
+       1 0 \n" >> /etc/fstab
+           printf "/dev/vgdat01/lvdat04    /u81                    ext4    defaults
+       1 0 \n" >> /etc/fstab
+           printf "/dev/vgdat01/lvdat05    /u85                    ext4    defaults
+       1 0 \n" >> /etc/fstab
+           mount /u01;mount /u03;mount /u80;mount /u81;mount /u85
+
+}
+
+function INFO {
+         printf "\n"> $BESP_DAT/${HOST}_lvm_info.dat
+         printf "Configuracion de LVM \n">> $BESP_DAT/${HOST}_lvm_info.dat
+         echo "______________________________________________________" >> ${BESP_DAT
+}/${HOST}_lvm_info.dat
+         printf "Volumenes Fisicos PVs:  \n">> $BESP_DAT/${HOST}_lvm_info.dat
+         pvs
+          >> $BESP_DAT/${HOST}_lvm_info.dat
+         echo "______________________________________________________" >> ${BESP_DAT
+}/${HOST}_lvm_info.dat
+         printf "Volumenes Groups  VGs:  \n">> $BESP_DAT/${HOST}_lvm_info.dat
+         vgs
+          >> $BESP_DAT/${HOST}_lvm_info.dat
+         echo "______________________________________________________" >> ${BESP_DAT
+}/${HOST}_lvm_info.dat
+         printf "Volumens Logicos LVs: \n">> $BESP_DAT/${HOST}_lvm_info.dat
+         lvs
+          >> $BESP_DAT/${HOST}_lvm_info.dat
+         printf "Filesystem de Datos:  \n">> $BESP_DAT/${HOST}_lvm_info.dat
+         echo "______________________________________________________" >> ${BESP_DAT
+}/${HOST}_lvm_info.dat
+         df -h
+         >> $BESP_DAT/${HOST}_lvm_info.dat
+         #cat  ${BESP_DAT}/${HOST}_lvm_info.dat
+}
+
+
+#MAIN
+INICIO
+DISCOS
+CREATE
+INFO
