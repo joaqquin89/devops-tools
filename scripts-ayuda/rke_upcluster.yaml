@@ -1,0 +1,95 @@
+nodes:
+    - address: 192.168.3.127
+      user: ubuntu
+      role:
+        - controlplane
+        - etcd
+        - worker
+      ssh_key_path: 
+    - address: 192.168.3.165
+      user: ubuntu
+      role:
+        - controlplane
+        - etcd
+        - worker
+      ssh_key_path: 
+    - address: 192.168.3.154
+      user: ubuntu
+      role:
+        - worker
+      ssh_key_path: 
+    - address: 192.168.3.26
+      user: ubuntu
+      role:
+        - worker
+      ssh_key_path: 
+
+cluster_name: 
+
+cloud_provider:
+    name: aws
+
+# The kubernetes version used. For now, this should match the version defined in rancher/types defaults map: https://github.com/rancher/types/blob/master/apis/management.cattle.io/v3/k8s_defaults.go#L14
+# In case the kubernetes_version and kubernetes image in system_images are defined, the system_images configuration will take precedence over kubernetes_versi
+on.
+kubernetes_version: v1.13.1-rancher1-1
+system_images:
+  etcd: quay.io/coreos/etcd:v3.2.24
+  kubernetes: rancher/hyperkube:v1.13.1-rancher1
+  alpine: rancher/rke-tools:v0.1.16
+  #nginx_proxy: rancher/rke-tools:v0.1.16
+  cert_downloader: rancher/rke-tools:v0.1.16
+  kubernetes_services_sidecar: rancher/rke-tools:v0.1.24
+  pod_infra_container: rancher/pause-amd64:3.1
+
+  # kube-dns images
+  kubedns: gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.15.0
+  dnsmasq: gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.15.0
+  kubedns_sidecar: gcr.io/google_containers/k8s-dns-sidecar-amd64:1.15.0
+  kubedns_autoscaler: gcr.io/google_containers/cluster-proportional-autoscaler-amd64:1.0.0
+
+  # CoreDNS images
+  coredns: coredns/coredns:1.2.6
+  coredns_autoscaler: rancher/cluster-proportional-autoscaler-amd64:1.0.0
+
+  # Flannel images
+  flannel: quay.io/coreos/flannel:v0.10.0
+  flannel_cni: quay.io/coreos/flannel-cni:v0.3.0
+
+  # Calico images
+  calico_node: quay.io/calico/node:v3.4.0
+  calico_cni: quay.io/calico/cni:v3.4.0
+  calico_controllers: ""
+  calico_ctl: quay.io/calico/ctl:v2.0.0
+
+  # Canal images
+  canal_node: quay.io/calico/node:v3.4.0
+  canal_cni: quay.io/calico/cni:v3.4.0
+  canal_flannel: quay.io/coreos/flannel:v0.10.0
+
+  # Weave images
+  weave_node: weaveworks/weave-kube:2.5.0
+  weave_cni: weaveworks/weave-npc:2.5.0
+
+  # Ingress controller images
+  #ingress: rancher/nginx-ingress-controller:0.21.0-rancher1
+  #ingress_backend: rk8s.gcr.io/defaultbackend:1.4
+
+  # Metrics server image
+  metrics_server: gcr.io/google_containers/metrics-server-amd64:v0.3.1
+
+# Currently, only authentication strategy supported is x509.
+# You can optionally create additional SANs (hostnames or IPs) to add to
+#  the API server PKI certificate.
+# This is useful if you want to use a load balancer for the control plane servers.
+authentication:
+    strategy: x509
+    sans:
+      - ""
+      - " "
+
+# Kubernetes Authorization mode
+# Use `mode: rbac` to enable RBAC
+# Use `mode: none` to disable authorization
+authorization:
+    mode: rbac
